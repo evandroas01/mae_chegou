@@ -12,11 +12,14 @@ const migrations = [
     cpf VARCHAR(14),
     motoristaId INT,
     tenantId INT,
+    statusOnline BOOLEAN NOT NULL DEFAULT FALSE,
+    lastHeartbeat DATETIME NULL DEFAULT NULL,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
     INDEX idx_tenant (tenantId),
     INDEX idx_motorista (motoristaId),
+    INDEX idx_users_motorista_online (statusOnline, role),
     FOREIGN KEY (motoristaId) REFERENCES users(id) ON DELETE SET NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`,
 
@@ -324,6 +327,12 @@ const migrations = [
     INDEX idx_tenant (tenantId),
     FOREIGN KEY (veiculoId) REFERENCES veiculos(id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`,
+
+  // Alteração para adicionar statusOnline e lastHeartbeat em users (para DBs existentes)
+  `ALTER TABLE users
+    ADD COLUMN statusOnline BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN lastHeartbeat DATETIME NULL DEFAULT NULL;`,
+  `CREATE INDEX idx_users_motorista_online ON users (statusOnline, role);`
 ];
 
 async function runMigrations() {
@@ -332,8 +341,17 @@ async function runMigrations() {
 
     for (let i = 0; i < migrations.length; i++) {
       const migration = migrations[i];
-      await pool.execute(migration);
-      console.log(`✅ Migration ${i + 1}/${migrations.length} executada com sucesso`);
+      try {
+        await pool.execute(migration);
+        console.log(`✅ Migration ${i + 1}/${migrations.length} executada com sucesso`);
+      } catch (err: any) {
+        // Ignora erros de "coluna duplicada" ou "índice duplicado" causados por ALTER TABLE/CREATE INDEX
+        if (err.code === 'ER_DUP_FIELDNAME' || err.code === 'ER_DUP_KEYNAME') {
+          console.log(`⚠️ Migration ${i + 1}/${migrations.length} ignorada: já aplicada (${err.code})`);
+        } else {
+          throw err;
+        }
+      }
     }
 
     console.log('✅ Todas as migrations foram executadas com sucesso!');

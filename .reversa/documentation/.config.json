@@ -1,0 +1,27 @@
+{
+  "version": "0.1.0",
+  "createdAt": "2026-05-19T00:45:00Z",
+  "readerProfile": "novo_dev",
+  "depth": "full",
+  "visualStyle": "sober",
+  "seed": {
+    "source": "project_name",
+    "hash": "cheguei_mae"
+  },
+  "knowledgeSources": {
+    "soul": false,
+    "chronicle": false,
+    "topology": false,
+    "sddSpecs": ["autenticacao", "alunos", "financeiro", "contratos", "manutencao", "rotas", "notificacoes", "chat", "perfil", "upload", "relatorios", "dashboard"],
+    "sourceCode": true,
+    "architecture": true,
+    "domain": true,
+    "permissions": true,
+    "stateMachines": true,
+    "confidenceReport": true,
+    "codeAnalysis": true,
+    "inventory": true,
+    "dependencies": true,
+    "modulesJson": true
+  }
+}

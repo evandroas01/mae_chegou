@@ -94,6 +94,14 @@ export class UserModel {
       fields.push('cpf = ?');
       values.push(updates.cpf);
     }
+    if (updates.statusOnline !== undefined) {
+      fields.push('statusOnline = ?');
+      values.push(updates.statusOnline);
+    }
+    if (updates.lastHeartbeat !== undefined) {
+      fields.push('lastHeartbeat = ?');
+      values.push(updates.lastHeartbeat);
+    }
 
     fields.push('updatedAt = NOW()');
     values.push(id);
@@ -125,6 +133,8 @@ export class UserModel {
       cpf: row.cpf,
       motoristaId: row.motoristaId ? row.motoristaId.toString() : undefined,
       tenantId: row.tenantId ? row.tenantId.toString() : undefined,
+      statusOnline: Boolean(row.statusOnline),
+      lastHeartbeat: row.lastHeartbeat,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };

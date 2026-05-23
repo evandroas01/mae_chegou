@@ -12,6 +12,7 @@ import MapView, { PROVIDER_GOOGLE, Region, Marker } from 'react-native-maps';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { localizacaoService } from '@/services/localizacaoService';
 import { veiculoService } from '@/services/veiculoService';
+import { rotaService } from '@/services/rotaService';
 import { LocalizacaoVeiculo } from '@/types/localizacao';
 
 export default function Localizacao() {
@@ -41,8 +42,10 @@ export default function Localizacao() {
       return null;
     }
   }
+  const { currentLocation } = useStatusOnline();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [veiculoLocation, setVeiculoLocation] = useState<LocalizacaoVeiculo | null>(null);
+  const [motoristaOnline, setMotoristaOnline] = useState<boolean>(false);
   const [veiculoId, setVeiculoId] = useState<string | null>(null);
   const [region, setRegion] = useState<Region>({
     latitude: -23.55052, // São Paulo (fallback)
@@ -52,7 +55,6 @@ export default function Localizacao() {
   });
   const [mapError, setMapError] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
-  const locationWatchSubscription = useRef<Location.LocationSubscription | null>(null);
 
   useEffect(() => {
     // Verificar se está rodando na web (mapas não funcionam na web)
@@ -63,44 +65,46 @@ export default function Localizacao() {
 
     (async () => {
       try {
-        // Solicitar permissão de localização
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        
-        if (status !== 'granted') {
-          Alert.alert(
-            'Permissão Negada',
-            'A permissão de localização foi negada. O mapa será exibido com uma localização padrão.',
-          );
-          return;
-        }
+        if (user?.role === 'motorista') {
+          // Solicitar permissão de localização apenas se for motorista
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          
+          if (status !== 'granted') {
+            Alert.alert(
+              'Permissão Negada',
+              'A permissão de localização foi negada. O mapa será exibido com uma localização padrão.',
+            );
+            return;
+          }
 
-        // Obter localização atual
-        const currentLocation = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-        });
+          // Obter localização atual
+          const currentLocation = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.High,
+          });
 
-        setLocation(currentLocation);
+          setLocation(currentLocation);
 
-        // Atualizar região do mapa para a localização do usuário
-        const newRegion: Region = {
-          latitude: currentLocation.coords.latitude,
-          longitude: currentLocation.coords.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        };
+          // Atualizar região do mapa para a localização do usuário
+          const newRegion: Region = {
+            latitude: currentLocation.coords.latitude,
+            longitude: currentLocation.coords.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          };
 
-        setRegion(newRegion);
+          setRegion(newRegion);
 
-        // Animar o mapa para a localização do usuário
-        if (mapRef.current) {
-          mapRef.current.animateToRegion(newRegion, 1000);
+          // Animar o mapa para a localização do usuário
+          if (mapRef.current) {
+            mapRef.current.animateToRegion(newRegion, 1000);
+          }
         }
       } catch (error) {
         console.error('Erro ao obter localização:', error);
         setMapError('Não foi possível obter sua localização. Verifique se o GPS está ativado.');
       }
     })();
-  }, []);
+  }, [user?.role]);
 
   // Buscar veículo do motorista
   useEffect(() => {
@@ -120,96 +124,75 @@ export default function Localizacao() {
     }
   };
 
-  // Watch de localização para motorista
+  // Sincronizar localização local com a do contexto global em tempo real
   useEffect(() => {
-    if (user?.role === 'motorista' && isOnline && veiculoId) {
-      let subscription: Location.LocationSubscription | null = null;
+    if (currentLocation) {
+      setLocation(currentLocation);
 
-      // Configurar watch de localização em tempo real
-      Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 30000, // 30 segundos
-          distanceInterval: 50, // 50 metros
-        },
-        (newLocation) => {
-          setLocation(newLocation);
-          sendLocation(newLocation);
+      // Se for motorista, atualiza a região do mapa conforme se move
+      if (user?.role === 'motorista') {
+        const newRegion: Region = {
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        setRegion(newRegion);
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(newRegion, 1000);
         }
-      ).then((sub) => {
-        subscription = sub;
-        locationWatchSubscription.current = sub;
-      }).catch((error) => {
-        console.error('Erro ao configurar watch de localização:', error);
-      });
-
-      return () => {
-        if (subscription) {
-          subscription.remove();
-        }
-        if (locationWatchSubscription.current) {
-          locationWatchSubscription.current.remove();
-        }
-      };
+      }
     }
-  }, [user?.role, isOnline, veiculoId]);
-
-  const sendLocation = async (loc?: Location.LocationObject) => {
-    const locToSend = loc || location;
-    if (!veiculoId || !locToSend) return;
-
-    try {
-      await localizacaoService.saveLocalizacao({
-        veiculoId,
-        latitude: locToSend.coords.latitude,
-        longitude: locToSend.coords.longitude,
-        velocidade: locToSend.coords.speed || undefined,
-        direcao: locToSend.coords.heading || undefined,
-      });
-    } catch (error) {
-      console.error('Erro ao enviar localização:', error);
-    }
-  };
+  }, [currentLocation, user?.role]);
 
   // Buscar localização do motorista (responsável)
   useEffect(() => {
-    if (isResponsavel && isOnline) {
+    if (isResponsavel) {
       loadLocalizacaoMotorista();
 
-      // Buscar localização periodicamente a cada 10 segundos
+      // Buscar localização periodicamente a cada 3 segundos
       const interval = setInterval(() => {
         loadLocalizacaoMotorista();
-      }, 10000); // 10 segundos
+      }, 3000); // 3 segundos
 
       return () => clearInterval(interval);
     } else {
       setVeiculoLocation(null);
     }
-  }, [isResponsavel, isOnline]);
+  }, [isResponsavel]);
 
   const loadLocalizacaoMotorista = async () => {
     try {
-      const localizacao = await localizacaoService.getLocalizacaoMotorista();
-      if (localizacao) {
-        setVeiculoLocation(localizacao);
-        
-        // Atualizar região do mapa para a localização do veículo
-        const newRegion: Region = {
-          latitude: localizacao.latitude,
-          longitude: localizacao.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        };
+      const statusRes = await rotaService.getMotoristaStatus();
+      setMotoristaOnline(statusRes.statusOnline);
 
-        setRegion(newRegion);
+      if (statusRes.statusOnline) {
+        const localizacao = await localizacaoService.getLocalizacaoMotorista();
+        if (localizacao) {
+          setVeiculoLocation(localizacao);
+          
+          // Atualizar região do mapa para a localização do veículo
+          const newRegion: Region = {
+            latitude: localizacao.latitude,
+            longitude: localizacao.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          };
 
-        // Animar o mapa para a localização do veículo
-        if (mapRef.current) {
-          mapRef.current.animateToRegion(newRegion, 1000);
+          setRegion(newRegion);
+
+          // Animar o mapa para a localização do veículo
+          if (mapRef.current) {
+            mapRef.current.animateToRegion(newRegion, 1000);
+          }
         }
+      } else {
+        setVeiculoLocation(null);
       }
     } catch (error) {
       console.error('Erro ao carregar localização do motorista:', error);
+      setMotoristaOnline(false);
+      setVeiculoLocation(null);
     }
   };
 
@@ -248,16 +231,16 @@ export default function Localizacao() {
           <Card style={styles.statusCard}>
             <View style={styles.statusRow}>
               <IconSymbol
-                name={isOnline ? 'location.fill' : 'location.slash.fill'}
+                name={motoristaOnline ? 'location.fill' : 'location.slash.fill'}
                 size={24}
-                color={isOnline ? AdminLTETheme.colors.success : AdminLTETheme.colors.secondary}
+                color={motoristaOnline ? AdminLTETheme.colors.success : AdminLTETheme.colors.secondary}
               />
               <View style={styles.statusInfo}>
                 <Text style={styles.statusLabel}>
-                  {isOnline ? 'Motorista Online' : 'Motorista Offline'}
+                  {motoristaOnline ? 'Motorista Online' : 'Motorista Offline'}
                 </Text>
                 <Text style={styles.statusSubtext}>
-                  {isOnline 
+                  {motoristaOnline 
                     ? 'A localização do veículo está disponível' 
                     : 'A localização não está disponível no momento'}
                 </Text>
@@ -294,8 +277,8 @@ export default function Localizacao() {
               provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
               style={styles.map}
               initialRegion={region}
-              showsUserLocation={true}
-              showsMyLocationButton={true}
+              showsUserLocation={user?.role === 'motorista'}
+              showsMyLocationButton={user?.role === 'motorista'}
               zoomEnabled={true}
               scrollEnabled={true}
               pitchEnabled={true}
@@ -390,6 +373,11 @@ const styles = StyleSheet.create({
   markerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: AdminLTETheme.colors.primary,
   },
   errorContainer: {
     alignItems: 'center',

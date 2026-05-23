@@ -1,0 +1,357 @@
+{
+  "generated_at": "2026-05-19T00:14:00Z",
+  "modules": [
+    {
+      "name": "auth",
+      "path": "backend/src/controllers/AuthController.ts",
+      "purpose": "Autenticação JWT, registro de usuários, gestão de perfil e autorização por roles",
+      "primary_files": [
+        "backend/src/controllers/AuthController.ts",
+        "backend/src/models/UserModel.ts",
+        "backend/src/middleware/auth.ts",
+        "backend/src/middleware/tenant.ts",
+        "backend/src/utils/jwt.ts",
+        "backend/src/utils/password.ts",
+        "backend/src/validators/auth.validator.ts",
+        "backend/src/routes/auth.routes.ts",
+        "contexts/AuthContext.tsx",
+        "app/login.tsx",
+        "services/api.ts"
+      ],
+      "functions": [
+        { "name": "login", "file": "backend/src/controllers/AuthController.ts", "params": ["req: Request", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "register", "file": "backend/src/controllers/AuthController.ts", "params": ["req: Request", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "me", "file": "backend/src/controllers/AuthController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "update", "file": "backend/src/controllers/AuthController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "getResponsaveisByMotorista", "file": "backend/src/controllers/AuthController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "verifyPassword", "file": "backend/src/models/UserModel.ts", "params": ["email: string", "password: string"], "returns": "Promise<User | null>", "confidence": "confirmed" },
+        { "name": "authenticate", "file": "backend/src/middleware/auth.ts", "params": ["req: AuthRequest", "res: Response", "next: NextFunction"], "returns": "void", "confidence": "confirmed" },
+        { "name": "authorize", "file": "backend/src/middleware/auth.ts", "params": ["...roles: UserRole[]"], "returns": "middleware", "confidence": "confirmed" }
+      ],
+      "entities": [
+        {
+          "name": "User",
+          "fields": [
+            { "name": "id", "type": "string", "required": true },
+            { "name": "nome", "type": "string", "required": true },
+            { "name": "email", "type": "string", "required": true },
+            { "name": "password", "type": "string", "required": true },
+            { "name": "role", "type": "UserRole", "required": true },
+            { "name": "telefone", "type": "string", "required": false },
+            { "name": "cpf", "type": "string", "required": false },
+            { "name": "motoristaId", "type": "string", "required": false },
+            { "name": "tenantId", "type": "string", "required": false }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        { "description": "Email deve ser único no sistema", "location": "backend/src/controllers/AuthController.ts:52", "confidence": "confirmed" },
+        { "description": "JWT expira em 7 dias", "location": "backend/.env:11", "confidence": "confirmed" },
+        { "description": "Senha hasheada com bcrypt", "location": "backend/src/models/UserModel.ts:7", "confidence": "confirmed" },
+        { "description": "Responsáveis filtrados por motoristaId", "location": "backend/src/controllers/AuthController.ts:175", "confidence": "confirmed" }
+      ],
+      "dependencies": [],
+      "algorithms": [],
+      "complexity": "medium"
+    },
+    {
+      "name": "alunos",
+      "path": "backend/src/controllers/AlunoController.ts",
+      "purpose": "CRUD de alunos com criação cascata de escola, endereço e responsável",
+      "primary_files": [
+        "backend/src/controllers/AlunoController.ts",
+        "backend/src/models/AlunoModel.ts",
+        "backend/src/validators/aluno.validator.ts",
+        "backend/src/routes/alunos.routes.ts",
+        "app/alunos.tsx",
+        "app/cadastro-aluno.tsx",
+        "app/aluno-detalhe/[id].tsx",
+        "services/alunoService.ts",
+        "types/aluno.ts"
+      ],
+      "functions": [
+        { "name": "create", "file": "backend/src/controllers/AlunoController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "findAll", "file": "backend/src/controllers/AlunoController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "findById", "file": "backend/src/controllers/AlunoController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "findByMotorista", "file": "backend/src/models/AlunoModel.ts", "params": ["motoristaId: string", "tenantId: string"], "returns": "Promise<Aluno[]>", "confidence": "confirmed" },
+        { "name": "findByResponsavel", "file": "backend/src/models/AlunoModel.ts", "params": ["responsavelId: string", "tenantId: string"], "returns": "Promise<Aluno[]>", "confidence": "confirmed" }
+      ],
+      "entities": [
+        {
+          "name": "Aluno",
+          "fields": [
+            { "name": "id", "type": "string", "required": true },
+            { "name": "nome", "type": "string", "required": true },
+            { "name": "dataNascimento", "type": "Date", "required": true },
+            { "name": "serie", "type": "string", "required": true },
+            { "name": "turma", "type": "string", "required": true },
+            { "name": "periodo", "type": "Periodo (M|T|N)", "required": true },
+            { "name": "status", "type": "StatusAluno (ativo|inativo)", "required": true },
+            { "name": "valorMensal", "type": "number", "required": true },
+            { "name": "formaPagamento", "type": "debito|credito|pix|boleto", "required": true },
+            { "name": "diasSemana", "type": "JSON string", "required": true },
+            { "name": "datasVencimento", "type": "JSON string", "required": true }
+          ],
+          "confidence": "confirmed"
+        },
+        {
+          "name": "Escola",
+          "fields": [
+            { "name": "id", "type": "string", "required": true },
+            { "name": "nome", "type": "string", "required": true },
+            { "name": "endereco", "type": "string", "required": true },
+            { "name": "cidade", "type": "string", "required": true },
+            { "name": "estado", "type": "string", "required": true },
+            { "name": "cep", "type": "string", "required": true }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        { "description": "Motorista vê apenas alunos ativos", "location": "backend/src/models/AlunoModel.ts:74", "confidence": "confirmed" },
+        { "description": "Responsável criado com senha temporária não hasheada", "location": "backend/src/controllers/AlunoController.ts:119", "confidence": "confirmed" },
+        { "description": "Escola criada com cidade/estado hardcoded SP", "location": "backend/src/controllers/AlunoController.ts:45", "confidence": "confirmed" },
+        { "description": "Responsável existente validado por motoristaId e tenantId", "location": "backend/src/controllers/AlunoController.ts:92", "confidence": "confirmed" }
+      ],
+      "dependencies": ["auth"],
+      "algorithms": [],
+      "complexity": "high"
+    },
+    {
+      "name": "financeiro",
+      "path": "backend/src/controllers/FinanceiroController.ts",
+      "purpose": "Gestão de lançamentos financeiros com resumo mensal e cálculo de inadimplência",
+      "primary_files": [
+        "backend/src/controllers/FinanceiroController.ts",
+        "backend/src/models/LancamentoModel.ts",
+        "backend/src/validators/financeiro.validator.ts",
+        "backend/src/routes/financeiro.routes.ts",
+        "app/financeiro.tsx",
+        "app/financeiro/[id].tsx",
+        "app/financeiro/novo.tsx",
+        "app/pagamentos.tsx",
+        "services/financeiroService.ts",
+        "types/financeiro.ts"
+      ],
+      "functions": [
+        { "name": "create", "file": "backend/src/controllers/FinanceiroController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "getResumo", "file": "backend/src/controllers/FinanceiroController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" }
+      ],
+      "entities": [
+        {
+          "name": "Lancamento",
+          "fields": [
+            { "name": "tipo", "type": "receita|despesa", "required": true },
+            { "name": "categoria", "type": "receita_recorrente|receita_extra|despesa_fixa|despesa_variavel", "required": true },
+            { "name": "valor", "type": "number", "required": true },
+            { "name": "status", "type": "pago|pendente|atrasado", "required": true }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        { "description": "Status auto-calculado: vencimento < hoje = atrasado", "location": "backend/src/controllers/FinanceiroController.ts:29", "confidence": "confirmed" },
+        { "description": "Saldo considera apenas lançamentos pagos", "location": "backend/src/controllers/FinanceiroController.ts:169", "confidence": "confirmed" },
+        { "description": "Inadimplência = receitas atrasadas / receita mensal * 100", "location": "backend/src/controllers/FinanceiroController.ts:190", "confidence": "confirmed" }
+      ],
+      "dependencies": ["auth", "alunos", "contratos"],
+      "algorithms": ["calculo_resumo_financeiro"],
+      "complexity": "high"
+    },
+    {
+      "name": "contratos",
+      "path": "backend/src/controllers/ContratoController.ts",
+      "purpose": "Ciclo de vida de contratos com auditoria e relação N:N com alunos",
+      "primary_files": [
+        "backend/src/controllers/ContratoController.ts",
+        "backend/src/models/ContratoModel.ts",
+        "backend/src/validators/contrato.validator.ts",
+        "backend/src/routes/contratos.routes.ts",
+        "app/contratos.tsx",
+        "services/contratoService.ts",
+        "types/contrato.ts"
+      ],
+      "functions": [
+        { "name": "create", "file": "backend/src/controllers/ContratoController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "assinar", "file": "backend/src/controllers/ContratoController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "cancelar", "file": "backend/src/controllers/ContratoController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" }
+      ],
+      "entities": [
+        { "name": "Contrato", "fields": [], "confidence": "confirmed" },
+        { "name": "ContratoAluno", "fields": [], "confidence": "confirmed" },
+        { "name": "ContratoLog", "fields": [], "confidence": "confirmed" }
+      ],
+      "business_rules": [
+        { "description": "Número auto-gerado: CT-{ano}-{seq}", "location": "backend/src/controllers/ContratoController.ts:29", "confidence": "confirmed" },
+        { "description": "Log de auditoria em cada transição de estado", "location": "backend/src/controllers/ContratoController.ts:52", "confidence": "confirmed" }
+      ],
+      "dependencies": ["auth", "alunos"],
+      "algorithms": [],
+      "complexity": "medium"
+    },
+    {
+      "name": "manutencao",
+      "path": "backend/src/controllers/ManutencaoController.ts",
+      "purpose": "Agendamento e controle de manutenções preventivas e corretivas de veículos",
+      "primary_files": [
+        "backend/src/controllers/ManutencaoController.ts",
+        "backend/src/models/VeiculoModel.ts",
+        "backend/src/validators/manutencao.validator.ts",
+        "backend/src/routes/manutencoes.routes.ts",
+        "app/manutencao.tsx",
+        "services/manutencaoService.ts",
+        "types/manutencao.ts"
+      ],
+      "functions": [
+        { "name": "create", "file": "backend/src/controllers/ManutencaoController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "getVeiculos", "file": "backend/src/controllers/ManutencaoController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" }
+      ],
+      "entities": [
+        { "name": "Manutencao", "fields": [], "confidence": "confirmed" },
+        { "name": "Veiculo", "fields": [], "confidence": "confirmed" },
+        { "name": "DocumentoVeiculo", "fields": [], "confidence": "confirmed" }
+      ],
+      "business_rules": [
+        { "description": "Veículo validado: pertence ao motorista + tenant", "location": "backend/src/controllers/ManutencaoController.ts:28", "confidence": "confirmed" },
+        { "description": "Status auto: dataAgendada → agendada, senão → realizada", "location": "backend/src/controllers/ManutencaoController.ts:37", "confidence": "confirmed" }
+      ],
+      "dependencies": ["auth"],
+      "algorithms": [],
+      "complexity": "medium"
+    },
+    {
+      "name": "rotas",
+      "path": "backend/src/controllers/RotaController.ts",
+      "purpose": "Gestão de rotas de transporte com tracking GPS em tempo real",
+      "primary_files": [
+        "backend/src/controllers/RotaController.ts",
+        "backend/src/models/RotaModel.ts",
+        "backend/src/validators/rota.validator.ts",
+        "backend/src/routes/rotas.routes.ts",
+        "app/rotas.tsx",
+        "app/localizacao.tsx",
+        "services/rotaService.ts",
+        "services/localizacaoService.ts",
+        "types/rota.ts",
+        "types/localizacao.ts"
+      ],
+      "functions": [
+        { "name": "create", "file": "backend/src/controllers/RotaController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "iniciar", "file": "backend/src/controllers/RotaController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "finalizar", "file": "backend/src/controllers/RotaController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "saveLocalizacao", "file": "backend/src/controllers/RotaController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "getLocalizacaoMotorista", "file": "backend/src/controllers/RotaController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" }
+      ],
+      "entities": [
+        { "name": "Rota", "fields": [], "confidence": "confirmed" },
+        { "name": "PontoRota", "fields": [], "confidence": "confirmed" },
+        { "name": "ParadaRota", "fields": [], "confidence": "confirmed" },
+        { "name": "LocalizacaoVeiculo", "fields": [], "confidence": "confirmed" }
+      ],
+      "business_rules": [
+        { "description": "Máquina de estados: nao_iniciada → em_andamento → finalizada", "location": "backend/src/controllers/RotaController.ts", "confidence": "confirmed" },
+        { "description": "Responsável rastreia motorista via cadeia user → veículo → localização", "location": "backend/src/controllers/RotaController.ts:272", "confidence": "confirmed" }
+      ],
+      "dependencies": ["auth", "alunos", "manutencao"],
+      "algorithms": ["rastreamento_gps"],
+      "complexity": "high"
+    },
+    {
+      "name": "notificacoes",
+      "path": "backend/src/controllers/NotificacaoController.ts",
+      "purpose": "Envio de notificações com destinatários individuais ou broadcast",
+      "primary_files": [
+        "backend/src/controllers/NotificacaoController.ts",
+        "backend/src/validators/notificacao.validator.ts",
+        "backend/src/routes/notificacoes.routes.ts",
+        "app/notificacoes.tsx",
+        "services/notificacaoService.ts",
+        "types/notificacao.ts"
+      ],
+      "functions": [
+        { "name": "create", "file": "backend/src/controllers/NotificacaoController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "marcarComoLida", "file": "backend/src/controllers/NotificacaoController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" }
+      ],
+      "entities": [
+        { "name": "Notificacao", "fields": [], "confidence": "confirmed" },
+        { "name": "NotificacaoDestinatario", "fields": [], "confidence": "confirmed" }
+      ],
+      "business_rules": [
+        { "description": "Tipo 'todos' cria registro para cada responsável do tenant", "location": "backend/src/controllers/NotificacaoController.ts:54", "confidence": "confirmed" },
+        { "description": "Gatilhos automáticos previstos mas não implementados", "location": "backend/src/database/migrate.ts:230", "confidence": "confirmed" }
+      ],
+      "dependencies": ["auth", "alunos"],
+      "algorithms": [],
+      "complexity": "medium"
+    },
+    {
+      "name": "chat",
+      "path": "app/chat.tsx",
+      "purpose": "Chat motorista ↔ responsável (apenas frontend)",
+      "primary_files": ["app/chat.tsx", "types/chat.ts"],
+      "functions": [],
+      "entities": [],
+      "business_rules": [],
+      "dependencies": ["auth"],
+      "algorithms": [],
+      "complexity": "low"
+    },
+    {
+      "name": "perfil",
+      "path": "app/perfil.tsx",
+      "purpose": "Tela de perfil do usuário com dados pessoais, veículo, CNH, escolas",
+      "primary_files": ["app/perfil.tsx", "types/perfil.ts", "services/userService.ts"],
+      "functions": [],
+      "entities": [],
+      "business_rules": [],
+      "dependencies": ["auth"],
+      "algorithms": [],
+      "complexity": "low"
+    },
+    {
+      "name": "upload",
+      "path": "backend/src/controllers/UploadController.ts",
+      "purpose": "Upload de arquivos via Multer com storage em disco",
+      "primary_files": [
+        "backend/src/controllers/UploadController.ts",
+        "backend/src/config/upload.ts",
+        "backend/src/routes/upload.routes.ts",
+        "services/uploadService.ts"
+      ],
+      "functions": [
+        { "name": "uploadFile", "file": "backend/src/controllers/UploadController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" },
+        { "name": "uploadMultiple", "file": "backend/src/controllers/UploadController.ts", "params": ["req: AuthRequest", "res: Response"], "returns": "Promise<void>", "confidence": "confirmed" }
+      ],
+      "entities": [],
+      "business_rules": [],
+      "dependencies": ["auth"],
+      "algorithms": [],
+      "complexity": "low"
+    },
+    {
+      "name": "relatorios",
+      "path": "app/relatorios.tsx",
+      "purpose": "Tela de relatórios (apenas frontend, sem backend dedicado)",
+      "primary_files": ["app/relatorios.tsx"],
+      "functions": [],
+      "entities": [],
+      "business_rules": [],
+      "dependencies": ["financeiro", "alunos", "manutencao"],
+      "algorithms": [],
+      "complexity": "low"
+    },
+    {
+      "name": "dashboard",
+      "path": "app/index.tsx",
+      "purpose": "Painel principal com métricas agregadas de outros módulos",
+      "primary_files": ["app/index.tsx", "services/mockData.ts"],
+      "functions": [],
+      "entities": [],
+      "business_rules": [],
+      "dependencies": ["financeiro", "alunos", "manutencao", "rotas"],
+      "algorithms": [],
+      "complexity": "medium"
+    }
+  ]
+}

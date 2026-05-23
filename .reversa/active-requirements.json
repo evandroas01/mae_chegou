@@ -1,0 +1,10 @@
+{
+  "schema-version": 1,
+  "feature-dir": "_reversa_forward/001-rastreamento-van-tempo-real",
+  "feature-id": "001",
+  "short-name": "rastreamento-van-tempo-real",
+  "started-at": "2026-05-23T19:31:00Z",
+  "current-stage": "requirements",
+  "stages-completed": [],
+  "paused-features": []
+}

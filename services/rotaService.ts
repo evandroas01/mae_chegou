@@ -41,5 +41,17 @@ export const rotaService = {
   async getLocalizacao(veiculoId: string): Promise<LocalizacaoVeiculo> {
     return api.get<LocalizacaoVeiculo>(`/rotas/localizacao/${veiculoId}`);
   },
+
+  async putOnline(): Promise<{ message: string, statusOnline: boolean, lastHeartbeat: string, notificacoesEnviadas: number }> {
+    return api.put<{ message: string, statusOnline: boolean, lastHeartbeat: string, notificacoesEnviadas: number }>('/rotas/online', {});
+  },
+
+  async putOffline(): Promise<{ message: string, statusOnline: boolean, notificacoesEnviadas: number }> {
+    return api.put<{ message: string, statusOnline: boolean, notificacoesEnviadas: number }>('/rotas/offline', {});
+  },
+
+  async getMotoristaStatus(): Promise<{ motoristaId: number, motoristaNome: string, statusOnline: boolean, lastHeartbeat: string | null, heartbeatExpirado?: boolean, veiculoId: number, veiculoPlaca: string }> {
+    return api.get<{ motoristaId: number, motoristaNome: string, statusOnline: boolean, lastHeartbeat: string | null, heartbeatExpirado?: boolean, veiculoId: number, veiculoPlaca: string }>('/rotas/motorista/status');
+  }
 };
 

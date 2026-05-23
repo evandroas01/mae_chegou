@@ -36,6 +36,8 @@ const MAPPING = {
   'wrench.and.screwdriver.fill': 'build',
   'chart.bar.fill': 'bar-chart',
   'map.fill': 'map',
+  'car.fill': 'directions-car',
+  'location.slash.fill': 'location-off',
 } as IconMapping;
 
 /**

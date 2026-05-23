@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { RotaModel } from '../models/RotaModel';
 import { VeiculoModel } from '../models/VeiculoModel';
+import { UserModel } from '../models/UserModel';
 import pool from '../config/database';
 
 export class RotaController {
@@ -254,6 +255,12 @@ export class RotaController {
         tenantId: req.tenantId,
       });
 
+      // T009: Renew heartbeat
+      await pool.execute(
+        'UPDATE users SET lastHeartbeat = NOW() WHERE id = ? AND tenantId = ?',
+        [req.userId, req.tenantId]
+      );
+
       res.json({ message: 'Localização salva com sucesso' });
     } catch (error) {
       console.error('Erro ao salvar localização:', error);
@@ -306,6 +313,181 @@ export class RotaController {
       res.status(403).json({ error: 'Acesso negado' });
     } catch (error) {
       console.error('Erro ao buscar localização do motorista:', error);
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
+  static async goOnline(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.tenantId || !req.userId) {
+        res.status(400).json({ error: 'Tenant ID ou User ID não encontrado' });
+        return;
+      }
+
+      const user = await UserModel.findById(req.userId);
+      if (user?.statusOnline) {
+        res.status(409).json({
+          error: 'Motorista já está online',
+          statusOnline: true,
+          lastHeartbeat: user.lastHeartbeat,
+        });
+        return;
+      }
+
+      await pool.execute(
+        `UPDATE users SET statusOnline = TRUE, lastHeartbeat = NOW() WHERE id = ? AND tenantId = ?`,
+        [req.userId, req.tenantId]
+      );
+
+      const [notifResult] = await pool.execute(
+        `INSERT INTO notificacoes (tipo, titulo, mensagem, enviarAgora, status, remetenteId, tenantId, gatilhoTipo)
+         VALUES ('especifico', 'Motorista Online', 'A van iniciou a operação.', true, 'enviada', ?, ?, 'rota_inicio')`,
+        [req.userId, req.tenantId]
+      ) as any;
+      const notificacaoId = notifResult.insertId;
+
+      const [responsaveis] = await pool.execute(
+        `SELECT DISTINCT u.id 
+         FROM alunos a 
+         JOIN users u ON u.id = a.responsavelId 
+         WHERE a.motoristaId = ? AND a.status = 'ativo' AND a.tenantId = ? AND u.role = 'responsavel'`,
+        [req.userId, req.tenantId]
+      ) as any[];
+
+      if (responsaveis.length > 0) {
+        const values = responsaveis.map((r: any) => [notificacaoId, r.id]);
+        const placeholders = values.map(() => '(?, ?)').join(', ');
+        await pool.execute(
+          `INSERT INTO notificacao_destinatarios (notificacaoId, destinatarioId) VALUES ${placeholders}`,
+          values.flat()
+        );
+      }
+
+      res.status(200).json({
+        message: 'Motorista online',
+        statusOnline: true,
+        lastHeartbeat: new Date().toISOString(),
+        notificacoesEnviadas: responsaveis.length
+      });
+    } catch (error) {
+      console.error('Erro ao ficar online:', error);
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
+  static async goOffline(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.tenantId || !req.userId) {
+        res.status(400).json({ error: 'Tenant ID ou User ID não encontrado' });
+        return;
+      }
+
+      const user = await UserModel.findById(req.userId);
+      if (!user?.statusOnline) {
+        res.status(409).json({
+          error: 'Motorista já está offline',
+          statusOnline: false,
+        });
+        return;
+      }
+
+      await pool.execute(
+        `UPDATE users SET statusOnline = FALSE WHERE id = ? AND tenantId = ?`,
+        [req.userId, req.tenantId]
+      );
+
+      const [notifResult] = await pool.execute(
+        `INSERT INTO notificacoes (tipo, titulo, mensagem, enviarAgora, status, remetenteId, tenantId, gatilhoTipo)
+         VALUES ('especifico', 'Motorista Offline', 'A van encerrou a operação.', true, 'enviada', ?, ?, 'rota_fim')`,
+        [req.userId, req.tenantId]
+      ) as any;
+      const notificacaoId = notifResult.insertId;
+
+      const [responsaveis] = await pool.execute(
+        `SELECT DISTINCT u.id 
+         FROM alunos a 
+         JOIN users u ON u.id = a.responsavelId 
+         WHERE a.motoristaId = ? AND a.status = 'ativo' AND a.tenantId = ? AND u.role = 'responsavel'`,
+        [req.userId, req.tenantId]
+      ) as any[];
+
+      if (responsaveis.length > 0) {
+        const values = responsaveis.map((r: any) => [notificacaoId, r.id]);
+        const placeholders = values.map(() => '(?, ?)').join(', ');
+        await pool.execute(
+          `INSERT INTO notificacao_destinatarios (notificacaoId, destinatarioId) VALUES ${placeholders}`,
+          values.flat()
+        );
+      }
+
+      res.status(200).json({
+        message: 'Motorista offline',
+        statusOnline: false,
+        notificacoesEnviadas: responsaveis.length
+      });
+    } catch (error) {
+      console.error('Erro ao ficar offline:', error);
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
+  static async getMotoristaStatus(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.tenantId || !req.userId) {
+        res.status(400).json({ error: 'Tenant ID ou User ID não encontrado' });
+        return;
+      }
+
+      if (req.userRole !== 'responsavel') {
+        res.status(403).json({ error: 'Acesso negado' });
+        return;
+      }
+
+      const [rows] = await pool.execute(
+        `SELECT DISTINCT u.id as motoristaId, u.nome as motoristaNome, u.statusOnline, u.lastHeartbeat
+         FROM alunos a
+         JOIN users u ON u.id = a.motoristaId
+         WHERE a.responsavelId = ? AND a.status = 'ativo' AND a.tenantId = ? LIMIT 1`,
+        [req.userId, req.tenantId]
+      ) as any[];
+
+      if (rows.length === 0) {
+        res.status(404).json({ error: 'Nenhum motorista vinculado encontrado' });
+        return;
+      }
+
+      const m = rows[0];
+      let online = Boolean(m.statusOnline);
+      let expirado = false;
+
+      if (online && m.lastHeartbeat) {
+        const now = new Date();
+        const hb = new Date(m.lastHeartbeat);
+        const diffMs = now.getTime() - hb.getTime();
+        if (diffMs > 5 * 60 * 1000) {
+          online = false;
+          expirado = true;
+          await pool.execute('UPDATE users SET statusOnline = FALSE WHERE id = ?', [m.motoristaId]);
+        }
+      }
+
+      const veiculos = await VeiculoModel.findByMotorista(m.motoristaId.toString(), req.tenantId);
+      if (veiculos.length === 0) {
+        res.status(404).json({ error: 'Nenhum veículo encontrado para este motorista' });
+        return;
+      }
+
+      res.status(200).json({
+        motoristaId: m.motoristaId,
+        motoristaNome: m.motoristaNome,
+        statusOnline: online,
+        lastHeartbeat: m.lastHeartbeat,
+        heartbeatExpirado: expirado,
+        veiculoId: Number(veiculos[0].id),
+        veiculoPlaca: veiculos[0].placa
+      });
+    } catch (error) {
+      console.error('Erro ao buscar status do motorista:', error);
       res.status(500).json({ error: 'Erro interno do servidor' });
     }
   }

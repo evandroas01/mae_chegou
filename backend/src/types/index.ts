@@ -11,6 +11,8 @@ export interface User {
   cpf?: string;
   motoristaId?: string; // Para responsável: ID do motorista
   tenantId?: string; // Para multi-tenancy (ID da empresa/organização)
+  statusOnline?: boolean;
+  lastHeartbeat?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

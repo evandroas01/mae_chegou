@@ -16,7 +16,7 @@ const getLocalIP = (): string => {
   // IP padrão baseado no que o Expo detectou (192.168.15.3)
   // Você pode alterar este IP se necessário
   // Para descobrir seu IP: no Windows use `ipconfig`, no Mac/Linux use `ifconfig`
-  const defaultIP = '192.168.15.3';
+  const defaultIP = '192.168.15.8';
   console.log('[API] Usando IP padrão:', defaultIP);
   return defaultIP;
 };
