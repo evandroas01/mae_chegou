@@ -1,9 +1,9 @@
 {
   "schema-version": 1,
-  "feature-dir": "_reversa_forward/001-rastreamento-van-tempo-real",
-  "feature-id": "001",
-  "short-name": "rastreamento-van-tempo-real",
-  "started-at": "2026-05-23T19:31:00Z",
+  "feature-dir": "_reversa_forward/002-separacao-repositorios",
+  "feature-id": "002",
+  "short-name": "separacao-repositorios",
+  "started-at": "2026-05-26T23:26:00Z",
   "current-stage": "requirements",
   "stages-completed": [],
   "paused-features": []
