@@ -26,7 +26,10 @@ const getLocalIP = (): string => {
 // e IP da rede local para dispositivos físicos
 const getApiBaseUrl = (): string => {
   if (!__DEV__) {
-    return 'https://api.chegueimae.com/api'; // Produção
+    // TODO: substitua pela URL gerada após o deploy no Render
+    // O serviço se chama "cheguei-mae-backend" no render.yaml
+    // A URL será algo como: https://cheguei-mae-backend.onrender.com/api
+    return 'https://cheguei-mae-backend.onrender.com/api';
   }
 
   // Para web, sempre usa localhost

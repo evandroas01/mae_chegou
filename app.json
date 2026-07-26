@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "cheguei_mae",
+    "name": "Cheguei Mãe",
     "slug": "cheguei_mae",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,11 +10,16 @@
     "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "br.com.chegueimae",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Este app precisa de acesso à sua localização para mostrar sua posição no mapa."
+        "NSLocationWhenInUseUsageDescription": "Este app precisa de acesso à sua localização para mostrar sua posição no mapa.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Este app precisa da sua localização para rastreamento em tempo real."
       }
     },
     "android": {
+      "package": "br.com.chegueimae",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
