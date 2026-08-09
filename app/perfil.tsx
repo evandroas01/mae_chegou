@@ -65,6 +65,27 @@ export default function Perfil() {
       setEmail(userData.email || '');
       setTelefone(userData.telefone ? maskPhone(userData.telefone) : '');
       setCpf(userData.cpf ? maskCPF(userData.cpf) : '');
+      
+      if (isMotorista) {
+        setCnhNumero(userData.cnhNumero || '');
+        setCnhValidade(userData.cnhValidade ? maskDate(unmaskDate(userData.cnhValidade)) : '');
+        setBanco(userData.banco || '');
+        setAgencia(userData.agencia || '');
+        setConta(userData.conta || '');
+        setPix(userData.pix || '');
+        
+        setVagasManha(userData.vagasManha?.toString() || '15');
+        setVagasTarde(userData.vagasTarde?.toString() || '15');
+        setVagasNoite(userData.vagasNoite?.toString() || '15');
+      }
+
+      if (userData.configuracoes) {
+        setReceberNotificacoes(userData.configuracoes.receberNotificacoes ?? true);
+        setReceberNotificacoesRotas(userData.configuracoes.receberNotificacoesRotas ?? true);
+        setReceberNotificacoesCobrancas(userData.configuracoes.receberNotificacoesCobrancas ?? true);
+        setLgpdConsentimento(userData.configuracoes.lgpdConsentimento ?? true);
+        setCompartilharDados(userData.configuracoes.compartilharDados ?? true);
+      }
     } catch (error: any) {
       console.error('Erro ao carregar dados do usuário:', error);
       Alert.alert('Erro', 'Não foi possível carregar os dados do perfil.');
@@ -130,13 +151,28 @@ export default function Perfil() {
         email: email.trim(),
       };
 
-      if (telefone) {
-        updates.telefone = telefone.replace(/\D/g, '');
+      if (telefone) updates.telefone = telefone.replace(/\D/g, '');
+      if (cpf) updates.cpf = cpf.replace(/\D/g, '');
+
+      if (isMotorista) {
+        updates.cnhNumero = cnhNumero.trim();
+        updates.cnhValidade = cnhValidade ? unmaskDate(cnhValidade) : undefined;
+        updates.banco = banco.trim();
+        updates.agencia = agencia.trim();
+        updates.conta = conta.trim();
+        updates.pix = pix.trim();
+        updates.vagasManha = parseInt(vagasManha) || 0;
+        updates.vagasTarde = parseInt(vagasTarde) || 0;
+        updates.vagasNoite = parseInt(vagasNoite) || 0;
       }
 
-      if (cpf) {
-        updates.cpf = cpf.replace(/\D/g, '');
-      }
+      updates.configuracoes = {
+        receberNotificacoes,
+        receberNotificacoesRotas,
+        receberNotificacoesCobrancas,
+        lgpdConsentimento,
+        compartilharDados,
+      };
 
       const updatedUser = await userService.update(updates);
       
@@ -224,8 +260,9 @@ export default function Perfil() {
               <Input
                 label="Validade *"
                 value={cnhValidade}
-                onChangeText={setCnhValidade}
+                onChangeText={(v) => setCnhValidade(maskDate(v))}
                 placeholder="DD/MM/AAAA"
+                keyboardType="numeric"
               />
 
               <TouchableOpacity 

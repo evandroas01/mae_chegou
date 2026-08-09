@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/Card';
@@ -8,29 +8,7 @@ import { AdminLTETheme } from '@/constants/adminlte-theme';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Chip } from '@/components/ui/Chip';
 import { Aluno } from '@/types/aluno';
-
-// Mock data - substituir por busca real
-const getAlunoMock = (id: string): Aluno | null => {
-  return {
-    id: '1',
-    nome: 'João Silva',
-    dataNascimento: '2010-05-15',
-    serie: '5º Ano',
-    turma: 'A',
-    periodo: 'M',
-    status: 'ativo',
-    escola: { nome: 'Escola Municipal São Paulo', endereco: 'Rua A, 123' },
-    responsavel: { nome: 'Maria Silva', cpf: '123.456.789-00', telefone: '(11) 98765-4321', email: 'maria@email.com' },
-    enderecoContratante: { rua: 'Rua B', numero: '456', bairro: 'Centro', cidade: 'São Paulo', estado: 'SP', cep: '01000-000' },
-    valorMensal: 250,
-    formaPagamento: 'pix',
-    diasSemana: ['segunda', 'terca', 'quarta', 'quinta', 'sexta'],
-    datasVencimento: [5],
-    pagamento: { status: 'em_dia', ultimoPagamento: '2024-01-05' },
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01',
-  };
-};
+import { alunoService } from '@/services/alunoService';
 
 type TabType = 'dados' | 'contrato' | 'pagamentos' | 'anexos';
 
@@ -38,8 +16,36 @@ export default function AlunoDetalhe() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<TabType>('dados');
+  const [aluno, setAluno] = useState<Aluno | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const aluno = getAlunoMock(id || '1');
+  useEffect(() => {
+    if (id) {
+      loadAluno();
+    }
+  }, [id]);
+
+  const loadAluno = async () => {
+    try {
+      setLoading(true);
+      const data = await alunoService.getById(id);
+      setAluno(data);
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível carregar os dados do aluno.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={AdminLTETheme.colors.primary} />
+        </View>
+      </AppLayout>
+    );
+  }
 
   if (!aluno) {
     return (
@@ -113,7 +119,15 @@ export default function AlunoDetalhe() {
         />
         <Button
           title={aluno.status === 'ativo' ? 'Tornar Inativo' : 'Tornar Ativo'}
-          onPress={() => {}}
+          onPress={async () => {
+            const novoStatus = aluno.status === 'ativo' ? 'inativo' : 'ativo';
+            try {
+              await alunoService.update(aluno.id, { status: novoStatus } as any);
+              loadAluno();
+            } catch (e) {
+              Alert.alert('Erro', 'Não foi possível alterar o status');
+            }
+          }}
           variant={aluno.status === 'ativo' ? 'danger' : 'success'}
           style={styles.headerButton}
         />
@@ -255,7 +269,7 @@ export default function AlunoDetalhe() {
           <Text style={styles.infoText}>Contrato vinculado: #{aluno.contratoId}</Text>
           <Button
             title="Ver Contrato"
-            onPress={() => {}}
+            onPress={() => router.push(`/cadastro-contrato?id=${aluno.contratoId}` as any)}
             variant="primary"
             style={styles.contractButton}
           />
@@ -265,7 +279,7 @@ export default function AlunoDetalhe() {
           <Text style={styles.infoText}>Nenhum contrato vinculado</Text>
           <Button
             title="Criar Contrato"
-            onPress={() => {}}
+            onPress={() => router.push(`/cadastro-contrato?alunoId=${aluno.id}` as any)}
             variant="primary"
             style={styles.contractButton}
           />

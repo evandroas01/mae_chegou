@@ -10,6 +10,7 @@ import { ScrollView, StyleSheet, Text, View, TouchableOpacity, FlatList, Modal, 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Input } from '@/components/ui/Input';
 import { manutencaoService } from '@/services/manutencaoService';
+import { api } from '@/services/api';
 import { Manutencao as ManutencaoType, ManutencaoTipo, ManutencaoStatus } from '@/types/manutencao';
 import { maskDate, unmaskDate } from '@/utils/masks';
 
@@ -22,30 +23,24 @@ export default function Manutencao() {
   const [abaAtiva, setAbaAtiva] = useState<AbaManutencao>('proximas');
   const [modalVisible, setModalVisible] = useState(false);
   const [manutencoes, setManutencoes] = useState<ManutencaoType[]>([]);
+  const [veiculos, setVeiculos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mockVeiculo] = useState({
-    placa: 'ABC-1234',
-    modelo: 'Van Escolar',
-    ano: 2020,
-    quilometragemAtual: 45000,
-    documentos: {
-      licenciamento: { numero: 'LIC-2024-001', validade: '2024-12-31' },
-      seguro: { numero: 'SEG-2024-001', validade: '2024-06-30' },
-      vistoriaEscolar: { numero: 'VIS-2024-001', validade: '2024-03-31' },
-    },
-  });
 
   useEffect(() => {
-    loadManutencoes();
+    loadData();
   }, []);
 
-  const loadManutencoes = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await manutencaoService.getAll();
-      setManutencoes(data);
+      const [manuts, veics] = await Promise.all([
+        manutencaoService.getAll(),
+        api.get<any[]>('/manutencoes/veiculos')
+      ]);
+      setManutencoes(manuts);
+      setVeiculos(veics);
     } catch (error: any) {
-      Alert.alert('Erro', error.message || 'Erro ao carregar manutenções');
+      Alert.alert('Erro', error.message || 'Erro ao carregar dados');
     } finally {
       setLoading(false);
     }
@@ -155,8 +150,12 @@ export default function Manutencao() {
     }
 
     try {
-      // TODO: Buscar veiculoId do motorista
-      const veiculoId = '1'; // Substituir por busca real do veículo do motorista
+      // Pegar o primeiro veiculo se tiver
+      if (veiculos.length === 0) {
+        Alert.alert('Erro', 'Você não possui veículos cadastrados para adicionar manutenção.');
+        return;
+      }
+      const veiculoId = veiculos[0].id;
 
       await manutencaoService.create({
         veiculoId,
@@ -182,7 +181,7 @@ export default function Manutencao() {
       });
       
       Alert.alert('Sucesso', 'Manutenção cadastrada com sucesso!');
-      loadManutencoes();
+      loadData();
     } catch (error: any) {
       Alert.alert('Erro', error.message || 'Erro ao cadastrar manutenção');
     }
@@ -204,33 +203,32 @@ export default function Manutencao() {
         </View>
 
         {/* Informações do Veículo */}
-        <Card title="Veículo">
-          <View style={styles.veiculoInfo}>
-            <Text style={styles.veiculoText}>
-              <Text style={styles.veiculoLabel}>Placa: </Text>
-              {mockVeiculo.placa}
-            </Text>
-            <Text style={styles.veiculoText}>
-              <Text style={styles.veiculoLabel}>Modelo: </Text>
-              {mockVeiculo.modelo}
-            </Text>
-            <Text style={styles.veiculoText}>
-              <Text style={styles.veiculoLabel}>Ano: </Text>
-              {mockVeiculo.ano}
-            </Text>
-            <Text style={styles.veiculoText}>
-              <Text style={styles.veiculoLabel}>Quilometragem: </Text>
-              {mockVeiculo.quilometragemAtual.toLocaleString('pt-BR')} km
-            </Text>
-          </View>
-        </Card>
-
-        {/* Status dos Documentos */}
-        <Card title="Status dos Documentos">
-          {renderDocumento('Licenciamento', mockVeiculo.documentos.licenciamento)}
-          {renderDocumento('Seguro', mockVeiculo.documentos.seguro)}
-          {renderDocumento('Vistoria Escolar', mockVeiculo.documentos.vistoriaEscolar)}
-        </Card>
+        {veiculos.length > 0 ? (
+          <Card title="Veículo">
+            <View style={styles.veiculoInfo}>
+              <Text style={styles.veiculoText}>
+                <Text style={styles.veiculoLabel}>Placa: </Text>
+                {veiculos[0].placa}
+              </Text>
+              <Text style={styles.veiculoText}>
+                <Text style={styles.veiculoLabel}>Modelo: </Text>
+                {veiculos[0].modelo}
+              </Text>
+              <Text style={styles.veiculoText}>
+                <Text style={styles.veiculoLabel}>Ano: </Text>
+                {veiculos[0].ano}
+              </Text>
+              <Text style={styles.veiculoText}>
+                <Text style={styles.veiculoLabel}>Quilometragem: </Text>
+                {veiculos[0].quilometragemAtual?.toLocaleString('pt-BR')} km
+              </Text>
+            </View>
+          </Card>
+        ) : (
+          <Card>
+            <Text style={styles.emptyText}>Nenhum veículo encontrado para este usuário.</Text>
+          </Card>
+        )}
 
         {/* Abas de Manutenções */}
         <View style={styles.tabsContainer}>

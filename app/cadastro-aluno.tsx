@@ -59,6 +59,7 @@ interface AlunoFormData {
   diasSemana: string[];
   datasVencimento: string;
   statusPagamento: 'em_dia' | 'atrasado';
+  tipoTransporte: 'ida' | 'volta' | 'ida_volta' | '';
 }
 
 const PERIODOS = [
@@ -135,6 +136,7 @@ export default function CadastroAluno() {
     diasSemana: [],
     datasVencimento: '',
     statusPagamento: 'em_dia',
+    tipoTransporte: '',
   });
 
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
@@ -152,11 +154,62 @@ export default function CadastroAluno() {
 
   // Carregar dados se estiver editando
   useEffect(() => {
-    if (isEdit) {
-      // Aqui você carregaria os dados do aluno
-      // Por enquanto, deixamos vazio para criar novo
+    if (isEdit && id) {
+      const loadAluno = async () => {
+        try {
+          setLoading(true);
+          const aluno = await alunoService.getById(id);
+          
+          setFormData({
+            nome: aluno.nome,
+            dataNascimento: new Date(aluno.dataNascimento).toLocaleDateString('pt-BR'),
+            serie: aluno.serie,
+            turma: aluno.turma,
+            periodo: aluno.periodo as any,
+            status: aluno.status as any,
+            responsavelNome: aluno.responsavel?.nome || '',
+            responsavelCpf: aluno.responsavel?.cpf ? maskCPF(aluno.responsavel.cpf) : '',
+            responsavelTelefone: aluno.responsavel?.telefone ? maskPhone(aluno.responsavel.telefone) : '',
+            responsavelEmail: aluno.responsavel?.email || '',
+            enderecoContratanteRua: aluno.enderecoContratante?.rua || '',
+            enderecoContratanteNumero: aluno.enderecoContratante?.numero || '',
+            enderecoContratanteComplemento: aluno.enderecoContratante?.complemento || '',
+            enderecoContratanteBairro: aluno.enderecoContratante?.bairro || '',
+            enderecoContratanteCidade: aluno.enderecoContratante?.cidade || '',
+            enderecoContratanteEstado: aluno.enderecoContratante?.estado || '',
+            enderecoContratanteCep: aluno.enderecoContratante?.cep ? maskCEP(aluno.enderecoContratante.cep) : '',
+            usarMesmoEndereco: !aluno.enderecoSaida,
+            enderecoSaidaRua: aluno.enderecoSaida?.rua || '',
+            enderecoSaidaNumero: aluno.enderecoSaida?.numero || '',
+            enderecoSaidaComplemento: aluno.enderecoSaida?.complemento || '',
+            enderecoSaidaBairro: aluno.enderecoSaida?.bairro || '',
+            enderecoSaidaCidade: aluno.enderecoSaida?.cidade || '',
+            enderecoSaidaEstado: aluno.enderecoSaida?.estado || '',
+            enderecoSaidaCep: aluno.enderecoSaida?.cep ? maskCEP(aluno.enderecoSaida.cep) : '',
+            escolaNome: aluno.escola?.nome || '',
+            escolaEndereco: aluno.escola?.endereco || '',
+            valorMensal: aluno.valorMensal ? aluno.valorMensal.toString() : '',
+            formaPagamento: aluno.formaPagamento as any,
+            diasSemana: Array.isArray(aluno.diasSemana) ? aluno.diasSemana : typeof aluno.diasSemana === 'string' ? JSON.parse(aluno.diasSemana) : [],
+            datasVencimento: Array.isArray(aluno.datasVencimento) ? aluno.datasVencimento.join(', ') : typeof aluno.datasVencimento === 'string' ? JSON.parse(aluno.datasVencimento).join(', ') : '',
+            statusPagamento: 'em_dia',
+            tipoTransporte: (aluno as any).tipoTransporte || '',
+          });
+          
+          if (aluno.responsavel) {
+            setUsarResponsavelExistente(true);
+            setResponsavelSelecionado(aluno.responsavel.id);
+          }
+        } catch (error) {
+          Alert.alert('Erro', 'Não foi possível carregar os dados do aluno.');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      loadAluno();
     }
-  }, [isEdit]);
+  }, [isEdit, id]);
 
   const loadResponsaveis = async () => {
     try {
@@ -198,6 +251,40 @@ export default function CadastroAluno() {
     setFormData((prev) => ({ ...prev, [field]: formattedValue }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleCepBlur = async (tipo: 'contratante' | 'saida') => {
+    const cepField = tipo === 'contratante' ? 'enderecoContratanteCep' : 'enderecoSaidaCep';
+    const cep = formData[cepField].replace(/\D/g, '');
+    
+    if (cep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          if (tipo === 'contratante') {
+            setFormData(prev => ({
+              ...prev,
+              enderecoContratanteRua: data.logradouro,
+              enderecoContratanteBairro: data.bairro,
+              enderecoContratanteCidade: data.localidade,
+              enderecoContratanteEstado: data.uf,
+            }));
+          } else {
+            setFormData(prev => ({
+              ...prev,
+              enderecoSaidaRua: data.logradouro,
+              enderecoSaidaBairro: data.bairro,
+              enderecoSaidaCidade: data.localidade,
+              enderecoSaidaEstado: data.uf,
+            }));
+          }
+        }
+      } catch (error) {
+        console.log('Erro ao buscar CEP', error);
+      }
     }
   };
 
@@ -248,6 +335,7 @@ export default function CadastroAluno() {
     if (!formData.escolaEndereco.trim()) newErrors.escolaEndereco = 'Endereço da escola é obrigatório';
     if (!formData.valorMensal.trim()) newErrors.valorMensal = 'Valor mensal é obrigatório';
     if (!formData.formaPagamento) newErrors.formaPagamento = 'Forma de pagamento é obrigatória';
+    if (!formData.tipoTransporte) newErrors.tipoTransporte = 'Tipo de transporte é obrigatório';
     if (formData.diasSemana.length === 0) newErrors.diasSemana = 'Selecione pelo menos um dia da semana';
     if (!formData.datasVencimento.trim()) newErrors.datasVencimento = 'Data(s) de vencimento é obrigatória';
 
@@ -313,6 +401,7 @@ export default function CadastroAluno() {
         },
         valorMensal: parseFloat(formData.valorMensal.replace(',', '.')) || 0,
         formaPagamento: formData.formaPagamento,
+        tipoTransporte: formData.tipoTransporte,
         diasSemana: formData.diasSemana,
         datasVencimento: formData.datasVencimento.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d)),
       };
@@ -631,6 +720,7 @@ export default function CadastroAluno() {
               label="CEP"
               value={formData.enderecoContratanteCep}
               onChangeText={(value) => handleChange('enderecoContratanteCep', value)}
+              onBlur={() => handleCepBlur('contratante')}
               placeholder="00000-000"
               keyboardType="numeric"
             />
@@ -717,6 +807,7 @@ export default function CadastroAluno() {
                   label="CEP"
                   value={formData.enderecoSaidaCep}
                   onChangeText={(value) => handleChange('enderecoSaidaCep', value)}
+                  onBlur={() => handleCepBlur('saida')}
                   placeholder="00000-000"
                   keyboardType="numeric"
                 />
@@ -766,6 +857,31 @@ export default function CadastroAluno() {
                 ))}
               </View>
               {errors.formaPagamento && <Text style={styles.errorText}>{errors.formaPagamento}</Text>}
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Tipo de Transporte *</Text>
+              <View style={styles.chipsRow}>
+                <Chip
+                  label="Ida"
+                  selected={formData.tipoTransporte === 'ida'}
+                  onPress={() => handleChange('tipoTransporte', 'ida')}
+                  variant="primary"
+                />
+                <Chip
+                  label="Volta"
+                  selected={formData.tipoTransporte === 'volta'}
+                  onPress={() => handleChange('tipoTransporte', 'volta')}
+                  variant="primary"
+                />
+                <Chip
+                  label="Ida e Volta"
+                  selected={formData.tipoTransporte === 'ida_volta'}
+                  onPress={() => handleChange('tipoTransporte', 'ida_volta')}
+                  variant="primary"
+                />
+              </View>
+              {errors.tipoTransporte && <Text style={styles.errorText}>{errors.tipoTransporte}</Text>}
             </View>
 
             <View style={styles.fieldGroup}>

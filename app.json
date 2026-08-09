@@ -12,9 +12,20 @@
       "supportsTablet": true,
       "bundleIdentifier": "br.com.chegueimae",
       "buildNumber": "1",
+      "usesNonExemptEncryption": false,
+      "requiresFullScreen": false,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Este app precisa de acesso à sua localização para mostrar sua posição no mapa.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Este app precisa da sua localização para rastreamento em tempo real."
+        "NSLocationWhenInUseUsageDescription": "O Cheguei Mãe precisa da sua localização para exibir sua posição no mapa e acompanhar a rota da van escolar em tempo real.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "O Cheguei Mãe precisa da sua localização para rastreamento em tempo real da rota escolar, mesmo quando o app está em segundo plano.",
+        "NSLocationAlwaysUsageDescription": "O Cheguei Mãe precisa da sua localização para rastreamento contínuo da rota escolar.",
+        "NSCameraUsageDescription": "O Cheguei Mãe usa a câmera para você tirar fotos de perfil e dos alunos cadastrados.",
+        "NSPhotoLibraryUsageDescription": "O Cheguei Mãe acessa sua galeria para você escolher fotos de perfil e dos alunos cadastrados.",
+        "NSPhotoLibraryAddUsageDescription": "O Cheguei Mãe pode salvar fotos na sua galeria.",
+        "NSMicrophoneUsageDescription": "O Cheguei Mãe pode usar o microfone para recursos de comunicação.",
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -30,7 +41,11 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -54,9 +69,20 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Este app precisa da sua localização para rastreamento em tempo real."
+          "locationAlwaysAndWhenInUsePermission": "O Cheguei Mãe precisa da sua localização para rastreamento em tempo real da rota escolar.",
+          "locationAlwaysPermission": "O Cheguei Mãe precisa da sua localização para rastreamento contínuo da rota escolar.",
+          "locationWhenInUsePermission": "O Cheguei Mãe precisa da sua localização para exibir sua posição no mapa."
         }
-      ]
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Cheguei Mãe acessa sua galeria para você escolher fotos de perfil e dos alunos cadastrados.",
+          "cameraPermission": "O Cheguei Mãe usa a câmera para você tirar fotos de perfil e dos alunos cadastrados."
+        }
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

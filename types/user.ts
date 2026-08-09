@@ -21,6 +21,23 @@ export interface User {
   filhosIds?: string[];
   // Para aluno: ID do responsável
   responsavelId?: string;
+
+  cnhNumero?: string;
+  cnhValidade?: string;
+  banco?: string;
+  agencia?: string;
+  conta?: string;
+  pix?: string;
+  vagasManha?: number;
+  vagasTarde?: number;
+  vagasNoite?: number;
+  configuracoes?: {
+    receberNotificacoes?: boolean;
+    receberNotificacoesRotas?: boolean;
+    receberNotificacoesCobrancas?: boolean;
+    lgpdConsentimento?: boolean;
+    compartilharDados?: boolean;
+  };
 }
 
 /**

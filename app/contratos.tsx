@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import React, { useState, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { mockContratos, mockAlunos } from '@/services/mockData';
+import { api } from '@/services/api';
 import { Contrato } from '@/types/contrato';
 
 type PeriodoTab = 'M' | 'T' | 'N';
@@ -19,18 +19,29 @@ export default function Contratos() {
   const [periodoAtivo, setPeriodoAtivo] = useState<PeriodoTab>('M');
   const isResponsavel = user?.role === 'responsavel';
 
-  const contratosPorPeriodo = useMemo(() => {
-    let contratos = mockContratos.filter(c => c.periodo === periodoAtivo);
-    
-    // Se for responsável, filtrar apenas seus contratos
-    if (isResponsavel && user?.filhosIds) {
-      contratos = contratos.filter(c => 
-        c.alunoIds.some(alunoId => user.filhosIds?.includes(alunoId))
-      );
+  const [contratos, setContratos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    loadContratos();
+  }, []);
+
+  const loadContratos = async () => {
+    try {
+      setLoading(true);
+      const data = await api.get<any[]>('/contratos');
+      setContratos(data);
+    } catch (e) {
+      Alert.alert('Erro', 'Não foi possível carregar contratos');
+    } finally {
+      setLoading(false);
     }
-    
-    return contratos;
-  }, [periodoAtivo, isResponsavel, user]);
+  };
+
+  const contratosPorPeriodo = useMemo(() => {
+    let list = contratos.filter(c => c.periodo === periodoAtivo);
+    return list;
+  }, [periodoAtivo, contratos]);
 
   const getStatusAssinaturaColor = (status: string) => {
     switch (status) {
@@ -47,7 +58,7 @@ export default function Contratos() {
     return status === 'em_dia' ? AdminLTETheme.colors.success : AdminLTETheme.colors.danger;
   };
 
-  const handleAssinar = (contrato: Contrato) => {
+  const handleAssinar = (contrato: any) => {
     Alert.alert(
       'Assinar Contrato',
       `Deseja assinar o contrato ${contrato.numero}?`,
@@ -55,21 +66,27 @@ export default function Contratos() {
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Assinar',
-          onPress: () => {
-            Alert.alert('Sucesso', 'Contrato assinado com sucesso!');
+          onPress: async () => {
+            try {
+              await api.put(`/contratos/${contrato.id}`, { statusAssinatura: 'assinado' });
+              Alert.alert('Sucesso', 'Contrato assinado com sucesso!');
+              loadContratos();
+            } catch (e) {
+              Alert.alert('Erro', 'Erro ao assinar contrato');
+            }
           },
         },
       ]
     );
   };
 
-  const handleBaixarPDF = (contrato: Contrato) => {
+  const handleBaixarPDF = (contrato: any) => {
     Alert.alert('Em desenvolvimento', 'Funcionalidade em breve');
   };
 
-  const renderContrato = ({ item }: { item: Contrato }) => {
-    const responsavel = mockAlunos.find(a => a.contratoId === item.id)?.responsavel;
-    const alunos = mockAlunos.filter(a => item.alunoIds.includes(a.id));
+  const renderContrato = ({ item }: { item: any }) => {
+    const responsavelNome = item.responsavelNome || 'Não informado';
+    const alunos = item.alunos || [];
 
     return (
       <Card style={styles.contratoCard}>
@@ -78,11 +95,11 @@ export default function Contratos() {
             <Text style={styles.contratoNumero}>{item.numero}</Text>
             {!isResponsavel && (
               <Text style={styles.contratoResponsavel}>
-                {responsavel?.nome || 'Responsável não encontrado'}
+                {responsavelNome}
               </Text>
             )}
             <Text style={styles.contratoAlunos}>
-              {alunos.map(a => a.nome).join(', ')}
+              {alunos.map((a: any) => a.nome).join(', ')}
             </Text>
           </View>
           <View style={styles.contratoStatus}>
@@ -141,10 +158,10 @@ export default function Contratos() {
             <>
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() => router.push(`/aluno-detalhe/${alunos[0]?.id}` as any)}
+                onPress={() => router.push(`/cadastro-contrato?id=${item.id}` as any)}
               >
-                <IconSymbol name="eye.fill" size={16} color={AdminLTETheme.colors.primary} />
-                <Text style={styles.actionText}>Ver Aluno</Text>
+                <IconSymbol name="pencil" size={16} color={AdminLTETheme.colors.primary} />
+                <Text style={styles.actionText}>Editar</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton}>
                 <IconSymbol name="message.fill" size={16} color={AdminLTETheme.colors.success} />
